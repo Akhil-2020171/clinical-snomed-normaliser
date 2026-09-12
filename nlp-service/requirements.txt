@@ -1,7 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
+pydantic
 transformers
 torch
-pydantic
-numpy
-faiss-cpu
