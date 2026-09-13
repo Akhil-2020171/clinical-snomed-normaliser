@@ -8,6 +8,9 @@ from app.linker.snomed_linker import SnomedLinker
 
 from app.assertion.detector import AssertionDetector
 
+from app.schemas.request import ExtractionRequest
+from app.schemas.response import ExtractionResponse
+
 app = FastAPI()
 
 assertion_detector = AssertionDetector()
@@ -27,25 +30,29 @@ snomed_linker = SnomedLinker(
     snomed_data
 )
 
-@app.post("/extract")
-def extract_entities(text: str):
-
-    result = entity_extractor.extract(text)
+@app.post("/extract", response_model=ExtractionResponse)
+def extract_entities(request: ExtractionRequest):
+    result = entity_extractor.extract(request.text)
 
     for entity in result["entities"]:
 
         entity["assertion"] = (
             assertion_detector.detect(
-                text,
+                request.text,
                 entity["start"]
             )
         )
 
-        matches = snomed_linker.link(
-            entity["mention"],
-            entity["label"]
+        entity["snomed"] = (
+            snomed_linker.link(
+                entity["mention"],
+                entity["label"]
+            )
         )
 
-        entity["snomed"] = matches
+    result["transformedText"] = entity_extractor.transform_text(
+        request.text,
+        result["entities"]
+    )
 
     return result

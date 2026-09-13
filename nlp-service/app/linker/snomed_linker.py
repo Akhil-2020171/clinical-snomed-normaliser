@@ -6,6 +6,21 @@ DISEASE = "64572001"
 QUALIFIER_VALUE = "362981000"
 BODY_STRUCTURE = "123037004"
 
+CONTAINED_MATCH_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "at",
+    "for",
+    "in",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "with"
+}
+
 class SnomedLinker:
 
     def __init__(self, snomed_data):
@@ -431,22 +446,39 @@ class SnomedLinker:
         return []
 
     def find_contained_terms(self, mention: str):
-        normalized_mention = self.normalize_term(mention)
+
+        normalized_mention = self.normalize_term(
+            mention
+        )
+
+        tokens = normalized_mention.split()
 
         matches = []
 
-        for term, concept_ids in self.term_to_concepts.items():
+        # Generate every contiguous phrase.
+        for start in range(len(tokens)):
 
-            if not term:
-                continue
+            for end in range(
+                start + 1,
+                len(tokens) + 1
+            ):
 
-            pattern = r"\b" + re.escape(term) + r"\b"
+                phrase = " ".join(
+                    tokens[start:end]
+                )
 
-            if re.search(pattern, normalized_mention):
-                matches.append({
-                    "term": term,
-                    "conceptIds": concept_ids
-                })
+                concept_ids = (
+                    self.term_to_concepts.get(
+                        phrase
+                    )
+                )
+
+                if concept_ids:
+
+                    matches.append({
+                        "term": phrase,
+                        "conceptIds": concept_ids
+                    })
 
         # Prefer longer terms first.
         matches.sort(
@@ -454,8 +486,8 @@ class SnomedLinker:
             reverse=True
         )
 
-        # Remove terms completely contained in a longer
-        # matched term.
+        # Remove terms completely contained
+        # in a longer matched term.
         filtered = []
 
         for candidate in matches:
@@ -469,7 +501,9 @@ class SnomedLinker:
                 selected_term = selected["term"]
 
                 if re.search(
-                    r"\b" + re.escape(candidate_term) + r"\b",
+                    r"\b"
+                    + re.escape(candidate_term)
+                    + r"\b",
                     selected_term
                 ):
                     is_contained = True

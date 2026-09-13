@@ -1,6 +1,5 @@
 import torch
 
-
 class ClinicalEntityExtractor:
 
     def __init__(self, models):
@@ -27,6 +26,45 @@ class ClinicalEntityExtractor:
         return {
             "entities": entities
         }
+
+    def transform_text(self, text: str, entities: list[dict]) -> str:
+
+        replacements = []
+
+        for entity in entities:
+
+            snomed_matches = entity.get("snomed", [])
+
+            if not snomed_matches:
+                continue
+
+            best_match = snomed_matches[0]
+
+            replacement = (
+                f'{best_match["conceptId"]}|{best_match["fsn"]}'
+            )
+
+            replacements.append({
+                "start": entity["start"],
+                "end": entity["end"],
+                "replacement": replacement
+            })
+
+        replacements.sort(
+            key=lambda x: x["start"],
+            reverse=True
+        )
+
+        transformed = text
+
+        for replacement in replacements:
+            transformed = (
+                transformed[:replacement["start"]]
+                + replacement["replacement"]
+                + transformed[replacement["end"]:]
+            )
+
+        return transformed
 
     def _extract_entities(
         self,
@@ -99,3 +137,38 @@ class ClinicalEntityExtractor:
             entities.append(current_entity)
 
         return entities
+
+    def get_non_overlapping_entities(self, entities: list[dict]) -> list[dict]:
+
+        selected = []
+
+        # Prefer longer entities when spans overlap.
+        entities = sorted(
+            entities,
+            key=lambda x: (
+                x["end"] - x["start"],
+                -x["start"]
+            ),
+            reverse=True
+        )
+
+        for entity in entities:
+
+            overlaps = False
+
+            for existing in selected:
+
+                if (
+                    entity["start"] < existing["end"]
+                    and entity["end"] > existing["start"]
+                ):
+                    overlaps = True
+                    break
+
+            if not overlaps:
+                selected.append(entity)
+
+        return sorted(
+            selected,
+            key=lambda x: x["start"]
+        )
