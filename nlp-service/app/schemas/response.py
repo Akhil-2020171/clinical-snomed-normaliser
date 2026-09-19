@@ -6,7 +6,8 @@ class SnomedHierarchy(BaseModel):
     disease: bool
     qualifierValue: bool
     bodyStructure: bool
-
+    procedure: bool
+    substance: bool
 
 class SnomedMatch(BaseModel):
     conceptId: str

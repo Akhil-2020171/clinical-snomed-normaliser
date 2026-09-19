@@ -19,9 +19,28 @@ class ClinicalEntityExtractor:
             "DISEASE"
         )
 
-        entities = symptom_entities + disease_entities
+        procedure_entities = self._extract_entities(
+            text,
+            self.models.procedure_model,
+            "PROCEDURE"
+        )
 
-        entities.sort(key=lambda x: x["start"])
+        medication_entities = self._extract_entities(
+            text,
+            self.models.medication_model,
+            "MEDICATION"
+        )
+
+        entities = (
+            symptom_entities
+            + disease_entities
+            + procedure_entities
+            + medication_entities
+        )
+
+        entities = self.get_non_overlapping_entities(
+            entities
+        )
 
         return {
             "entities": entities
@@ -70,7 +89,8 @@ class ClinicalEntityExtractor:
         self,
         text,
         ner_model,
-        entity_type
+        entity_type,
+        allowed_label=None
     ):
 
         tokenizer = ner_model.tokenizer
@@ -101,6 +121,12 @@ class ClinicalEntityExtractor:
         for index, token_id in enumerate(predictions):
 
             label = labels[token_id.item()]
+
+            if allowed_label and label not in {
+                f"B-{allowed_label}",
+                f"I-{allowed_label}"
+            }:
+                label = "O"
 
             start, end = offset_mapping[0][index].tolist()
 

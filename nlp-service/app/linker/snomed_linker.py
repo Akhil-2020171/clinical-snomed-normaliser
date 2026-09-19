@@ -5,6 +5,8 @@ CLINICAL_FINDING = "404684003"
 DISEASE = "64572001"
 QUALIFIER_VALUE = "362981000"
 BODY_STRUCTURE = "123037004"
+PROCEDURE = "71388002"
+SUBSTANCE = "105590001"
 
 CONTAINED_MATCH_STOPWORDS = {
     "a",
@@ -171,6 +173,14 @@ class SnomedLinker:
             "bodyStructure": self.is_descendant_of(
                 concept_id,
                 BODY_STRUCTURE
+            ),
+            "procedure": self.is_descendant_of(
+                concept_id,
+                PROCEDURE
+            ),
+            "substance": self.is_descendant_of(
+                concept_id,
+                SUBSTANCE
             )
         }
 
@@ -244,6 +254,31 @@ class SnomedLinker:
                     score -= 0.80
 
                 if is_body_structure:
+                    score -= 0.70
+
+            elif entity_label == "PROCEDURE":
+
+                if hierarchy["procedure"]:
+                    score += 0.40
+
+                if hierarchy["clinicalFinding"]:
+                    score += 0.10
+
+                if hierarchy["qualifierValue"]:
+                    score -= 0.80
+
+                if hierarchy["bodyStructure"]:
+                    score -= 0.70
+
+            elif entity_label == "MEDICATION":
+
+                if hierarchy["substance"]:
+                    score += 0.40
+
+                if hierarchy["qualifierValue"]:
+                    score -= 0.80
+
+                if hierarchy["bodyStructure"]:
                     score -= 0.70
 
             candidate["score"] = round(
@@ -328,6 +363,31 @@ class SnomedLinker:
                     if hierarchy["bodyStructure"]:
                         score -= 0.80
 
+                elif entity_label == "PROCEDURE":
+
+                    if hierarchy["procedure"]:
+                        score += 1.00
+
+                    if hierarchy["clinicalFinding"]:
+                        score += 0.10
+
+                    if hierarchy["qualifierValue"]:
+                        score -= 1.00
+
+                    if hierarchy["bodyStructure"]:
+                        score -= 0.80
+
+                elif entity_label == "MEDICATION":
+
+                    if hierarchy["substance"]:
+                        score += 1.00
+
+                    if hierarchy["qualifierValue"]:
+                        score -= 1.00
+
+                    if hierarchy["bodyStructure"]:
+                        score -= 0.80
+
                 candidate["score"] = round(
                     score,
                     2
@@ -344,8 +404,35 @@ class SnomedLinker:
 
     def select_clinical_candidate(
         self,
-        candidates
+        candidates,
+        entity_label: str
     ):
+        if entity_label == "PROCEDURE":
+
+            procedure_candidates = [
+                candidate
+                for candidate in candidates
+                if candidate["hierarchy"]["procedure"]
+            ]
+
+            if not procedure_candidates:
+                return None
+
+            return procedure_candidates[0]
+
+        if entity_label == "MEDICATION":
+
+            medication_candidates = [
+                candidate
+                for candidate in candidates
+                if candidate["hierarchy"]["substance"]
+            ]
+
+            if not medication_candidates:
+                return None
+
+            return medication_candidates[0]
+
         clinical_candidates = [
             candidate
             for candidate in candidates
@@ -377,7 +464,8 @@ class SnomedLinker:
             )
 
             selected = self.select_clinical_candidate(
-                ranked
+                ranked,
+                entity_label
             )
 
             if selected:
@@ -411,7 +499,8 @@ class SnomedLinker:
                 )
 
                 selected = self.select_clinical_candidate(
-                    ranked
+                    ranked,
+                    entity_label
                 )
 
                 if selected:
@@ -433,13 +522,12 @@ class SnomedLinker:
             )
 
             selected = self.select_clinical_candidate(
-                ranked
+                ranked,
+                entity_label
             )
 
             if selected:
-                selected["matchType"] = (
-                    "contained_term"
-                )
+                selected["matchType"] = "contained_term"
 
                 return [selected]
 
