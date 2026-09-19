@@ -39,7 +39,8 @@ def extract_entities(request: ExtractionRequest):
         entity["assertion"] = (
             assertion_detector.detect(
                 request.text,
-                entity["start"]
+                entity["start"],
+                entity["end"]
             )
         )
 
