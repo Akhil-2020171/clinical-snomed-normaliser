@@ -1,0 +1,14 @@
+services:
+  nlp-service:
+    build:
+      context: ./nlp-service
+    container_name: clinical-snomed-nlp
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      SNOMED_BASE: /snomed/Snapshot/Terminology
+
+    volumes:
+      - ${SNOMED_HOST_PATH}:/snomed:ro

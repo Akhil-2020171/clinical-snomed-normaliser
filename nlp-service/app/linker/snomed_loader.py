@@ -1,12 +1,12 @@
 import csv
 import sys
+import os
 from pathlib import Path
 
 csv.field_size_limit(sys.maxsize)
 
 SNOMED_BASE = Path(
-    "/home/sub-escanor/Public/Data/SNOMEDCT/"
-    "International-Edition/Snapshot/Terminology"
+    os.getenv("SNOMED_BASE")
 )
 
 DESCRIPTION_FILE = (
